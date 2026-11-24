@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
+// Every Lerne page is per-user and must render at request time, so the
+// scaffold's cacheComponents / partialPrefetching opt-ins are left off.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
