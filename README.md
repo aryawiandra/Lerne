@@ -98,9 +98,20 @@ Each item below is exercised by the Playwright test (`tests/e2e/coreFlow.spec.ts
 
 These need real design work and are intentionally **not** implemented, so they can be built at the 16 Dec Final Day:
 
-1. **Cross-faculty course catalogue.** The schema covers a single programme (`courses.program` defaults to Teknik Komputer). Needed: a faculty/programme model, course equivalences across programmes, an import path for official curriculum data, and matching that understands equivalent courses.
-2. **Notifications.** Email/push when a request arrives, is accepted or declined, or a session is about to start, replacing today's page polling. This includes delivery preferences and quiet hours.
-3. **Tutor reputation audit.** Detecting rating manipulation and collusion beyond the pair cap (e.g. rings of accounts trading credits), weighting ratings by rater history, and a report/dispute flow with an audit trail.
+1. **Reputation and abuse review.** Flag tutor-learner pairs that repeatedly hit the weekly cap or always rate each other 5, and send them to a review queue.
+2. **Notifications and expiry.** Email when a request is made, accepted or about to expire (replacing today's page polling), plus automatic hand-off to the next tutor after 12 hours without a response.
+3. **Teaching record.** A verifiable page showing a tutor's completed hours by course.
+
+### Planned rules (from the credit simulation; not built yet)
+
+- **Safety-net credit:** +1 credit at the start of a week when a user's balance is 0, max 6 per semester.
+- **Fall-through on decline:** offer the request to up to 8 qualified tutors in turn, instead of only the top 3 suggestions.
+- **Tutor load limit:** max 2 sessions per tutor per week.
+- **Measured-time settlement:** settle by the time between the start and end scans, with a minimum session length (today credits use the booked duration).
+
+### Later (out of scope for this competition)
+
+- **Cross-faculty course catalogue.** The schema covers a single programme (`courses.program` defaults to Teknik Komputer). Needed: a faculty/programme model, course equivalences across programmes, an import path for official curriculum data, and matching that understands equivalent courses.
 
 ---
 
