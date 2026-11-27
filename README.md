@@ -73,7 +73,11 @@ Each item below is exercised by the Playwright test (`tests/e2e/coreFlow.spec.ts
    - **weekly pair cap = 3 credits** per tutor-learner pair (Mon–Sun, WIB), enforced when a tutor is chosen, at acceptance, *and* by the ledger trigger;
    - ledger rows cannot be updated, deleted or truncated, not even by the table owner (tested).
 8. **Ratings.** Both sides rate 1–5, once each, only after completion. The average rating feeds matching (tested).
-9. **Row Level Security on every table** (asserted by a test that scans `pg_class`). Users read only their own ledger, requests and sessions; other users' email addresses are not readable (column-level grant). Writes to requests, sessions, ledger and ratings go only through `security definer` functions that check `auth.uid()`.
+9. **Rules added after the credit simulation** (`supabase/migrations/0002_simulation_rules.sql`, tested in `tests/db/simulationRules.test.ts`):
+   - **Safety-net credit:** a user at a 0 balance gets +1 credit once per WIB week, at most 6 per semester (UI semesters: 1 Aug and 1 Feb). Claimed by the database when the user opens Lerne; the dashboard says so.
+   - **Fall-through on decline:** each decline reopens the request and the next qualified tutors are suggested; a request can be offered to at most 8 tutors, after which it has no candidates and `assign_tutor` refuses (`FALLTHROUGH_LIMIT`). The learner still taps to ask the next tutor; automatic hand-off after 12 hours is a Final Day task.
+   - **Tutor load limit:** a tutor is offered at most 2 sessions in one WIB week by default, adjustable 1–10 on the Teach page. Enforced in matching, when a tutor is asked, and again when the tutor accepts (two pending requests cannot both be accepted past the limit).
+10. **Row Level Security on every table** (asserted by a test that scans `pg_class`). Users read only their own ledger, requests and sessions; other users' email addresses are not readable (column-level grant). Writes to requests, sessions, ledger and ratings go only through `security definer` functions that check `auth.uid()`.
 
 ## Simulated, stubbed or unfinished
 
@@ -92,7 +96,7 @@ Each item below is exercised by the Playwright test (`tests/e2e/coreFlow.spec.ts
 - If a learner's balance drops after a session is accepted (only possible through an admin adjustment), the end scan fails and the session stays "in progress". There is no dispute or cancellation flow for accepted sessions yet.
 - No admin UI, no rate limiting on server actions, no account deletion or data export flow.
 - Profiles (display names) are visible to all signed-in users; emails are not.
-- Not tested on mobile layouts beyond basic responsive Tailwind classes. No accessibility audit has been done.
+- Mobile and accessibility: an **automated** audit only (`tests/e2e/mobileAudit.spec.ts`, 390×844 phone viewport, synthetic accounts): axe-core WCAG 2.0/2.1/2.2 A and AA rules on 7 screens of the core flow, horizontal overflow, and tap targets under 24 px (WCAG 2.2 SC 2.5.8). Last run 27 Nov 2026: 0 violations, no overflow, no small targets (after enlarging the nav links, sign-out button, course checkboxes and camera button), 8 user actions from the sign-in page to suggested tutors. It is not a usability test with real students and has not been run on a physical phone.
 
 ## Deliberately left for Final Day (not built)
 
@@ -102,11 +106,9 @@ These need real design work and are intentionally **not** implemented, so they c
 2. **Notifications and expiry.** Email when a request is made, accepted or about to expire (replacing today's page polling), plus automatic hand-off to the next tutor after 12 hours without a response.
 3. **Teaching record.** A verifiable page showing a tutor's completed hours by course.
 
-### Planned rules (from the credit simulation; not built yet)
+### Planned rules (not built yet)
 
-- **Safety-net credit:** +1 credit at the start of a week when a user's balance is 0, max 6 per semester.
-- **Fall-through on decline:** offer the request to up to 8 qualified tutors in turn, instead of only the top 3 suggestions.
-- **Tutor load limit:** max 2 sessions per tutor per week.
+- **Senior credit donation:** seniors can donate earned credits to the safety-net pool (not simulated).
 - **Measured-time settlement:** settle by the time between the start and end scans, with a minimum session length (today credits use the booked duration).
 
 ### Later (out of scope for this competition)
@@ -118,14 +120,14 @@ These need real design work and are intentionally **not** implemented, so they c
 ## Tests
 
 ```bash
-npm run test:unit   # 31 tests: matching rules, campus-email check, dev-session cookie, WIB time helpers
-npm run test:db     # 26 tests on a throwaway local Postgres DB: credit rules, RLS, QR tokens, ratings
-npm run test        # both (57)
-npm run test:e2e    # Playwright: full core flow in two browsers (rebuilds the lerne_e2e DB first)
+npm run test:unit   # 32 tests: matching rules (incl. tutor load limit), campus-email check, dev-session cookie, WIB time helpers
+npm run test:db     # 36 tests on a throwaway local Postgres DB: credit rules, simulation rules, RLS, QR tokens, ratings
+npm run test        # both (68)
+npm run test:e2e    # Playwright: full core flow in two browsers + automated mobile/accessibility audit (rebuilds the lerne_e2e DB first)
 npm run lint && npm run typecheck
 ```
 
-Results on the build machine (24 Nov 2026, Postgres 14.17, Node 22.15): **57/57 vitest passed; e2e 1/1 passed (2 consecutive runs); lint and typecheck clean; `next build` succeeds.**
+Results on the build machine (27 Nov 2026, Postgres 14.17, Node 22.15): **68/68 vitest passed; e2e 2/2 passed; lint and typecheck clean; `next build` succeeds.**
 
 DB tests need a local Postgres. Set `TEST_DATABASE_URL` (default `postgresql://localhost:5432/postgres`, used only to create `lerne_test_*` databases) and `E2E_DATABASE_URL` (default `postgresql://localhost:5432/lerne_e2e`) if yours differ.
 
