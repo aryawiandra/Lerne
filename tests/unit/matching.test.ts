@@ -14,6 +14,8 @@ function tutor(overrides: Partial<TutorCandidate> & { tutorId: string }): TutorC
     ratingCount: 0,
     pairCreditsThisWeek: 0,
     declined: false,
+    sessionsInWeek: 0,
+    weeklySessionLimit: 2,
     ...overrides,
   };
 }
@@ -146,5 +148,18 @@ describe("rankTutors", () => {
     const ranked = rankTutors(query, candidates);
     expect(ranked.map((t) => t.tutorId)).toEqual(["ok"]);
     expect(candidates[0]).not.toHaveProperty("overlapMinutes");
+  });
+});
+
+describe("tutor weekly session limit", () => {
+  test("excludes a tutor who already has their weekly maximum of sessions", () => {
+    // Arrange
+    const full = tutor({ tutorId: "full", sessionsInWeek: 2, weeklySessionLimit: 2 });
+    const raised = tutor({ tutorId: "raised", sessionsInWeek: 2, weeklySessionLimit: 3 });
+    // Act
+    const ids = rankTutors(query, [full, raised]).map((t) => t.tutorId);
+    // Assert
+    expect(isEligible(query, full)).toBe(false);
+    expect(ids).toEqual(["raised"]);
   });
 });

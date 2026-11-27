@@ -3,7 +3,7 @@
 // produced by running real sessions through the same SQL functions the app
 // uses — it is NOT real usage data.
 import type { Pool } from "pg";
-import { addSlot, createUser, makeTutor, rate, runSession } from "../db/flows";
+import { addSlot, createUser, makeTutor, rate, runSession, setWeeklyLimit } from "../db/flows";
 
 const MON = 1;
 const TUE = 2;
@@ -40,7 +40,10 @@ export async function seedDemoData(pool: Pool): Promise<Record<string, string>> 
   const ids: Record<string, string> = {};
   for (const user of DEMO_USERS) {
     ids[user.key] = await createUser(pool, `demo.${user.key}@ui.ac.id`, user.name);
-    if (user.courses.length > 0) await makeTutor(pool, ids[user.key], user.courses);
+    if (user.courses.length > 0) {
+      await makeTutor(pool, ids[user.key], user.courses);
+      await setWeeklyLimit(pool, ids[user.key], 5); // SYNTHETIC history packs several sessions into one week
+    }
     for (const [day, start, end] of user.slots) await addSlot(pool, ids[user.key], day, start, end);
   }
   for (const [learner, tutor, learnerScore, tutorScore] of HISTORY) {

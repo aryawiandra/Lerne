@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { asUser } from "@/lib/dbTx";
 import {
   assignAndAccept, balance, createRequest, createTestDb, createUser, grant, issueToken,
-  makeTutor, q, redeem, runSession, type TestDb,
+  makeTutor, q, redeem, runSession, setWeeklyLimit, type TestDb,
 } from "./harness";
 
 let db: TestDb;
@@ -107,6 +107,7 @@ describe("weekly cap per tutor-learner pair (cap = 3)", () => {
     const learner = await createUser(db.pool, "capLearner");
     await makeTutor(db.pool, tutor);
     await makeTutor(db.pool, otherTutor);
+    await setWeeklyLimit(db.pool, tutor, 5); // above the pair cap, so the pair cap is what blocks
     await grant(db.pool, learner, 10);
 
     for (let i = 0; i < 3; i += 1) await runSession(db.pool, learner, tutor, 1);

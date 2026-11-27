@@ -6,7 +6,7 @@ import { createUser as createNamedUser, makeTutor as makeTutorFor } from "../../
 import { asUser } from "@/lib/dbTx";
 
 export {
-  assignAndAccept, createRequest, DEFAULT_COURSE as COURSE, grant, issueToken, redeem, runSession,
+  assignAndAccept, createRequest, DEFAULT_COURSE as COURSE, grant, issueToken, redeem, runSession, setWeeklyLimit,
 } from "../../db/flows";
 
 const BASE_URL = process.env.TEST_DATABASE_URL ?? "postgresql://localhost:5432/postgres";

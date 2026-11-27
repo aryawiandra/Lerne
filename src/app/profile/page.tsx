@@ -1,18 +1,19 @@
-import { addSlot, deleteSlot, saveCourses } from "@/app/actions/profile";
+import { addSlot, deleteSlot, saveCourses, setWeeklyLimit } from "@/app/actions/profile";
 import { ActionForm } from "@/components/ActionForm";
 import { Card } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { getCourses, getMySlots, getMyTutorCourses } from "@/lib/queries";
+import { getCourses, getMySlots, getMyTutorCourses, getWeeklySessionLimit } from "@/lib/queries";
 import { DAY_NAMES, formatMinute } from "@/lib/time";
 
 const SELECT = "rounded-md border border-slate-300 px-2 py-1.5 text-sm";
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const [courses, mine, slots] = await Promise.all([
+  const [courses, mine, slots, weeklyLimit] = await Promise.all([
     getCourses(user.id),
     getMyTutorCourses(user.id),
     getMySlots(user.id),
+    getWeeklySessionLimit(user.id),
   ]);
   const teaching = new Set(mine);
   const semesters = [...new Set(courses.map((c) => c.semester))];
@@ -38,8 +39,8 @@ export default async function ProfilePage() {
                 {courses
                   .filter((c) => c.semester === sem)
                   .map((c) => (
-                    <label key={c.code} className="mt-1 flex items-center gap-2 text-sm">
-                      <input type="checkbox" name="course" value={c.code} defaultChecked={teaching.has(c.code)} />
+                    <label key={c.code} className="mt-1 flex min-h-11 items-center gap-2 text-sm">
+                      <input type="checkbox" className="h-6 w-6 shrink-0" name="course" value={c.code} defaultChecked={teaching.has(c.code)} />
                       {c.name}
                     </label>
                   ))}
@@ -84,6 +85,20 @@ export default async function ProfilePage() {
           <div className="text-sm">
             <label htmlFor="slot-end" className="block text-slate-600">To</label>
             <input id="slot-end" name="end" type="time" required defaultValue="16:00" className={SELECT} />
+          </div>
+        </ActionForm>
+      </Card>
+
+      <Card title="Sessions per week">
+        <p className="mb-3 text-xs text-slate-500">
+          Lerne stops suggesting you once you have this many sessions in a week, so the same tutors are not
+          overloaded. Default 2.
+        </p>
+        <ActionForm action={setWeeklyLimit} submitLabel="Save limit" className="flex flex-wrap items-end gap-3">
+          <div className="text-sm">
+            <label htmlFor="weekly-limit" className="block text-slate-600">At most</label>
+            <input id="weekly-limit" name="weeklyLimit" type="number" min={1} max={10} required
+              defaultValue={weeklyLimit} className={`${SELECT} w-20`} />
           </div>
         </ActionForm>
       </Card>

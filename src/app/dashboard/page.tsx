@@ -4,7 +4,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Card, StatusBadge } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
-import { getCreditSummary, getIncomingRequests, getLedger, getMyRequests, getMySessions } from "@/lib/queries";
+import { claimSafetyNet, getCreditSummary, getSafetyNetStatus, getIncomingRequests, getLedger, getMyRequests, getMySessions } from "@/lib/queries";
 import { formatWib } from "@/lib/time";
 
 const REASON_LABELS: Record<string, string> = {
@@ -12,11 +12,14 @@ const REASON_LABELS: Record<string, string> = {
   session_taught: "Taught",
   session_learned: "Learned",
   demo_adjustment: "Demo adjustment (synthetic)",
+  safety_net_grant: "Safety-net credit",
 };
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [credits, incoming, sessions, requests, ledger] = await Promise.all([
+  await claimSafetyNet(user.id); // before reading the balance (idempotent; the layout also claims)
+  const [safetyNet, credits, incoming, sessions, requests, ledger] = await Promise.all([
+    getSafetyNetStatus(user.id),
     getCreditSummary(user.id),
     getIncomingRequests(user.id),
     getMySessions(user.id),
@@ -36,6 +39,14 @@ export default async function DashboardPage() {
           Ask for help
         </Link>
       </div>
+
+      {safetyNet.grantedThisWeek && (
+        <p data-testid="safety-net" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          You were at 0 credits, so Lerne added 1 safety-net credit this week
+          ({safetyNet.usedThisSemester} of {safetyNet.maxPerSemester} this semester). Teaching a course you are
+          strong in earns credits back.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Balance" value={credits.balance} testId="balance" />

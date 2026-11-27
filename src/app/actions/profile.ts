@@ -72,6 +72,21 @@ export async function addSlot(_prev: FormState, formData: FormData): Promise<For
   return { ok: "Slot added." };
 }
 
+const limitSchema = z.coerce.number().int().min(1).max(10);
+
+export async function setWeeklyLimit(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const parsed = limitSchema.safeParse(formData.get("weeklyLimit"));
+  if (!parsed.success) return { error: "Choose between 1 and 10 sessions a week." };
+  try {
+    await withUser(user.id, (c) => c.query("select set_weekly_session_limit($1)", [parsed.data]));
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath("/profile");
+  return { ok: `You will be offered at most ${parsed.data} session(s) a week.` };
+}
+
 export async function deleteSlot(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
   const id = z.uuid().safeParse(formData.get("slotId"));

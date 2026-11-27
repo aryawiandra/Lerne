@@ -1,7 +1,8 @@
 // Tutor matching — plain, explainable rules (no AI):
 //   1. Eligibility (hard filters): tutor teaches the requested course, is not the
 //      learner, has not declined this request, and taking this session would not
-//      exceed the tutor-learner weekly credit cap.
+//      exceed the tutor-learner weekly credit cap, and the tutor is below their
+//      weekly session limit for that week (default 2, set by the tutor).
 //   2. Ranking: most minutes of the requested time window covered by the tutor's
 //      weekly free slots → higher rating (unrated tutors count as NEUTRAL_RATING)
 //      → more ratings (more evidence) → display name (stable tie-break).
@@ -29,6 +30,8 @@ export interface TutorCandidate {
   ratingCount: number;
   pairCreditsThisWeek: number;
   declined: boolean;
+  sessionsInWeek: number;
+  weeklySessionLimit: number;
 }
 
 export interface MatchQuery {
@@ -86,7 +89,8 @@ export function isEligible(query: MatchQuery, candidate: TutorCandidate): boolea
     candidate.teachesCourse &&
     candidate.tutorId !== query.learnerId &&
     !candidate.declined &&
-    candidate.pairCreditsThisWeek + query.durationHours <= query.pairWeeklyCap
+    candidate.pairCreditsThisWeek + query.durationHours <= query.pairWeeklyCap &&
+    candidate.sessionsInWeek < candidate.weeklySessionLimit
   );
 }
 

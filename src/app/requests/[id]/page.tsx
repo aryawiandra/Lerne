@@ -7,7 +7,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { Card, StatusBadge } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import type { RankedTutor } from "@/lib/matching";
-import { getRequest, getSuggestions } from "@/lib/queries";
+import { getFallthrough, getRequest, getSuggestions } from "@/lib/queries";
 import { formatWib } from "@/lib/time";
 
 export default async function RequestPage(props: PageProps<"/requests/[id]">) {
@@ -19,6 +19,7 @@ export default async function RequestPage(props: PageProps<"/requests/[id]">) {
 
   const isLearner = request.learnerId === user.id;
   const suggestions = isLearner && request.status === "open" ? await getSuggestions(user.id, request) : [];
+  const fallthrough = isLearner && request.status === "open" ? await getFallthrough(user.id, request.id) : null;
 
   return (
     <div className="space-y-6">
@@ -38,8 +39,13 @@ export default async function RequestPage(props: PageProps<"/requests/[id]">) {
         <Card title="Suggested tutors">
           <p className="mb-3 text-xs text-slate-500">
             Ranked by: teaches this course → free-slot overlap with your time → rating (new tutors count as 3.0).
-            Up to 3 shown.
+            Up to 3 shown. Tutors at their weekly session limit are skipped.
           </p>
+          {fallthrough && fallthrough.declined > 0 && (
+            <p data-testid="fallthrough" className="mb-3 text-xs text-slate-600">
+              {fallthrough.declined} of up to {fallthrough.maxTutors} tutors declined; showing the next qualified tutors.
+            </p>
+          )}
           {suggestions.length === 0 ? (
             <p className="text-sm text-slate-600">
               No eligible tutor for this course right now. Try another time or course.

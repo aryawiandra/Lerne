@@ -75,6 +75,60 @@ export function getCreditSummary(userId: string): Promise<CreditSummary> {
   });
 }
 
+export interface SafetyNetStatus {
+  grantedThisWeek: boolean;
+  usedThisSemester: number;
+  maxPerSemester: number;
+}
+
+/** Grants the weekly safety-net credit if the user is at zero (the database decides; idempotent per week). */
+export function claimSafetyNet(userId: string): Promise<boolean> {
+  return withUser(userId, async (c) => {
+    const [row] = await rows<{ granted: number }>(c, "select claim_safety_net_credit() as granted");
+    return row.granted === 1;
+  });
+}
+
+export function getSafetyNetStatus(userId: string): Promise<SafetyNetStatus> {
+  return withUser(userId, async (c) => {
+    const [row] = await rows<{ this_week: boolean; used: number; max: number }>(
+      c,
+      `select exists (select 1 from credit_ledger
+                      where reason = 'safety_net_grant'
+                        and date_trunc('week', created_at at time zone lerne_timezone())
+                            = date_trunc('week', now() at time zone lerne_timezone())) as this_week,
+              my_safety_net_used() as used, lerne_safety_net_max_per_semester() as max`,
+    );
+    return { grantedThisWeek: row.this_week, usedThisSemester: row.used, maxPerSemester: row.max };
+  });
+}
+
+export function getWeeklySessionLimit(userId: string): Promise<number> {
+  return withUser(userId, async (c) => {
+    const [row] = await rows<{ weekly_limit: number }>(
+      c,
+      "select weekly_session_limit as weekly_limit from profiles where id = auth.uid()",
+    );
+    return row.weekly_limit;
+  });
+}
+
+export interface FallthroughStatus {
+  declined: number;
+  maxTutors: number;
+}
+
+export function getFallthrough(userId: string, requestId: string): Promise<FallthroughStatus> {
+  return withUser(userId, async (c) => {
+    const [row] = await rows<{ declined: number; max: number }>(
+      c,
+      "select (select count(*)::int from request_declines where request_id = $1) as declined, lerne_fallthrough_max_tutors() as max",
+      [requestId],
+    );
+    return { declined: row.declined, maxTutors: row.max };
+  });
+}
+
 export function getLedger(userId: string): Promise<LedgerEntry[]> {
   return withUser(userId, (c) =>
     rows<LedgerEntry>(
@@ -148,6 +202,8 @@ interface CandidateRow {
   rating_count: number;
   pair_credits_this_week: number;
   declined: boolean;
+  sessions_in_week: number;
+  weekly_session_limit: number;
 }
 
 export function getSuggestions(userId: string, request: RequestView): Promise<RankedTutor[]> {
@@ -166,6 +222,8 @@ export function getSuggestions(userId: string, request: RequestView): Promise<Ra
         ratingCount: r.rating_count,
         pairCreditsThisWeek: r.pair_credits_this_week,
         declined: r.declined,
+        sessionsInWeek: r.sessions_in_week,
+        weeklySessionLimit: r.weekly_session_limit,
       })),
     );
   });

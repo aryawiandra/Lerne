@@ -25,6 +25,11 @@ export async function makeTutor(pool: Pool, tutorId: string, courses: readonly s
   );
 }
 
+/** The tutor raises (or lowers) their own weekly session limit (1-10; default 2). */
+export async function setWeeklyLimit(pool: Pool, tutorId: string, limit: number) {
+  await asUser(pool, tutorId, (c) => c.query("select set_weekly_session_limit($1)", [limit]));
+}
+
 export async function addSlot(pool: Pool, userId: string, dayOfWeek: number, startMinute: number, endMinute: number) {
   await asUser(pool, userId, (c) =>
     c.query(
