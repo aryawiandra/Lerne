@@ -104,7 +104,7 @@ export function RedeemPanel({ sessionId, phase }: { sessionId: string; phase: Ph
   return (
     <div className="space-y-3">
       {canScan && (
-        <button type="button" onClick={() => setScanning((s) => !s)} className="text-sm text-teal-800 underline">
+        <button type="button" onClick={() => setScanning((s) => !s)} className="inline-flex min-h-11 items-center text-sm text-teal-800 underline">
           {scanning ? "Stop camera" : "Scan QR with camera (experimental)"}
         </button>
       )}
